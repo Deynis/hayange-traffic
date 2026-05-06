@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hayange → PwC Dudelange</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --bg:       #f7f7f5;
+    --surface:  #ffffff;
+    --border:   rgba(0,0,0,0.08);
+    --text:     #1a1a1a;
+    --muted:    #888;
+    --a31:      #185FA5;
+    --sec:      #1D9E75;
+    --ott:      #BA7517;
+    --best-bg:  #EAF3DE;
+    --best-txt: #3B6D11;
+    --warn-bg:  #FAEEDA;
+    --warn-txt: #854F0B;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:      #1a1a1a;
+      --surface: #252525;
+      --border:  rgba(255,255,255,0.1);
+      --text:    #f0f0f0;
+      --muted:   #888;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 15px; padding: 16px; max-width: 680px; margin: 0 auto; }
+  h1 { font-size: 17px; font-weight: 500; margin-bottom: 4px; }
+  .subtitle { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+
+  /* ── Status bar ── */
+  .status-bar { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; flex-shrink: 0; }
+  .dot.live { background: #3B6D11; animation: pulse 2s infinite; }
+  .dot.stale { background: #BA7517; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* ── Route cards ── */
+  .cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 16px; }
+  @media(max-width:500px){ .cards { grid-template-columns: 1fr; } }
+  .card { background: var(--surface); border: 0.5px solid var(--border); border-radius: 12px; padding: 14px; position: relative; transition: border-color 0.3s; }
+  .card.best { border: 2px solid #639922; }
+  .best-badge { position: absolute; top: -9px; left: 12px; background: var(--best-bg); color: var(--best-txt); font-size: 11px; font-weight: 500; padding: 1px 8px; border-radius: 20px; }
+  .route-name { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .route-time { font-size: 28px; font-weight: 500; line-height: 1; }
+  .route-unit { font-size: 13px; color: var(--muted); }
+  .route-meta { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+  .trend { display: inline-block; font-size: 13px; margin-top: 4px; }
+  .trend.up   { color: #E24B4A; }
+  .trend.down { color: #3B6D11; }
+  .trend.flat { color: var(--muted); }
+
+  /* ── Chart ── */
+  .chart-wrap { background: var(--surface); border: 0.5px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  .chart-title { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+  .chart-container { position: relative; height: 200px; }
+
+  /* ── Historical note ── */
+  .hist-note { background: var(--surface); border: 0.5px solid var(--border); border-radius: 12px; padding: 14px; font-size: 12px; color: var(--muted); line-height: 1.6; margin-bottom: 16px; }
+  .hist-note strong { color: var(--text); font-weight: 500; }
+
+  /* ── Footer ── */
+  .footer { font-size: 11px; color: var(--muted); text-align: center; }
+  .refresh-btn { background: none; border: 0.5px solid var(--border); border-radius: 8px; color: var(--muted); font-size: 12px; padding: 6px 14px; cursor: pointer; margin-top: 10px; display: block; margin: 10px auto 0; }
+  .refresh-btn:hover { background: var(--surface); }
+
+  /* ── Config panel ── */
+  .config { background: var(--surface); border: 0.5px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 16px; font-size: 13px; }
+  .config label { color: var(--muted); display: block; margin-bottom: 4px; }
+  .config input { width: 100%; padding: 6px 10px; border: 0.5px solid var(--border); border-radius: 8px; font-size: 13px; background: var(--bg); color: var(--text); margin-bottom: 8px; }
+  .config button { padding: 7px 16px; border-radius: 8px; border: 0.5px solid var(--border); background: var(--bg); color: var(--text); font-size: 13px; cursor: pointer; }
+  details summary { font-size: 12px; color: var(--muted); cursor: pointer; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<h1>Hayange → PwC Dudelange</h1>
+<p class="subtitle" id="date-line">Loading…</p>
+
+<div class="status-bar">
+  <span class="dot" id="status-dot"></span>
+  <span id="status-text">Connecting…</span>
+</div>
+
+<!-- Route cards -->
+<div class="cards" id="cards">
+  <div class="card" id="card-A31">
+    <div class="route-name">A31 → Kanfen</div>
+    <div class="route-time" id="time-A31">–</div>
+    <div class="route-unit">min</div>
+    <div class="route-meta" id="meta-A31">waiting for data…</div>
+    <div class="trend flat" id="trend-A31">–</div>
+  </div>
+  <div class="card" id="card-Secondary">
+    <div class="route-name">Via Eschrange</div>
+    <div class="route-time" id="time-Secondary">–</div>
+    <div class="route-unit">min</div>
+    <div class="route-meta" id="meta-Secondary">waiting for data…</div>
+    <div class="trend flat" id="trend-Secondary">–</div>
+  </div>
+  <div class="card" id="card-Ottange">
+    <div class="route-name">Via Ottange</div>
+    <div class="route-time" id="time-Ottange">–</div>
+    <div class="route-unit">min</div>
+    <div class="route-meta" id="meta-Ottange">waiting for data…</div>
+    <div class="trend flat" id="trend-Ottange">–</div>
+  </div>
+</div>
+
+<!-- Trend chart -->
+<div class="chart-wrap">
+  <div class="chart-title">Travel time trend — this morning (min)</div>
+  <div class="chart-container">
+    <canvas id="trendChart" role="img" aria-label="Line chart of travel times for 3 routes this morning">Travel time trend for 3 routes.</canvas>
+  </div>
+</div>
+
+<!-- Historical context (shown once enough data) -->
+<div class="hist-note" id="hist-note" style="display:none">
+  <strong>Historical average for this weekday / time slot</strong><br>
+  <span id="hist-text"></span>
+</div>
+
+<!-- Config (hidden by default) -->
+<details>
+  <summary>⚙ Configure data source</summary>
+  <div class="config">
+    <label>Google Sheet ID</label>
+    <input type="text" id="cfg-sheet-id" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms">
+    <label>Sheet tab name</label>
+    <input type="text" id="cfg-tab" placeholder="raw_data">
+    <button onclick="saveConfig()">Save &amp; reload</button>
+  </div>
+</details>
+
+<button class="refresh-btn" onclick="loadData()">↻ Refresh now</button>
+<p class="footer" id="last-updated"></p>
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────
+const ROUTE_COLORS = {
+  "A31":       "#185FA5",
+  "Secondary": "#1D9E75",
+  "Ottange":   "#BA7517",
+};
+const ROUTE_LABELS = {
+  "A31": "A31 → Kanfen",
+  "Secondary": "Via Eschrange",
+  "Ottange": "Via Ottange",
+};
+const ROUTES = ["A31", "Secondary", "Ottange"];
+
+function getConfig() {
+  return {
+    sheetId: localStorage.getItem("sheetId") || "",
+    tab:     localStorage.getItem("tab")     || "raw_data",
+  };
+}
+function saveConfig() {
+  localStorage.setItem("sheetId", document.getElementById("cfg-sheet-id").value.trim());
+  localStorage.setItem("tab",     document.getElementById("cfg-tab").value.trim());
+  loadData();
+}
+
+// ── Fetch from Google Sheets (published CSV) ───────────────────────────────
+async function fetchSheetData() {
+  const { sheetId, tab } = getConfig();
+  if (!sheetId) return null;
+  // Published CSV URL — Sheet must be File > Share > Publish to web (CSV)
+  const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tab)}`;
+  const resp = await fetch(url + "&t=" + Date.now());
+  if (!resp.ok) throw new Error("Sheet fetch failed: " + resp.status);
+  const text = await resp.text();
+  return parseCSV(text);
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split("\n");
+  const headers = lines[0].split(",").map(h => h.replace(/"/g,"").trim());
+  return lines.slice(1).map(line => {
+    const vals = line.match(/(".*?"|[^,]+)(?=,|$)/g) || [];
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = (vals[i] || "").replace(/"/g,"").trim(); });
+    return obj;
+  });
+}
+
+// ── Process rows for today ────────────────────────────────────────────────
+function getTodayRows(rows) {
+  const today = new Date().toISOString().slice(0, 10);
+  return rows.filter(r => r.date === today);
+}
+
+function groupByRoute(rows) {
+  const g = {};
+  ROUTES.forEach(r => g[r] = []);
+  rows.forEach(row => {
+    if (g[row.route]) {
+      g[row.route].push({
+        time: row.time_hhmm,
+        dur:  parseFloat(row.duration_min),
+        sec:  parseInt(row.duration_sec),
+      });
+    }
+  });
+  return g;
+}
+
+// ── Trend calculation ─────────────────────────────────────────────────────
+function calcTrend(points) {
+  if (points.length < 2) return { arrow: "–", cls: "flat", delta: 0 };
+  const recent = points.slice(-3).map(p => p.dur);
+  const older  = points.slice(-6, -3).map(p => p.dur);
+  if (older.length === 0) {
+    // compare last two points only
+    const delta = points[points.length-1].dur - points[points.length-2].dur;
+    if (delta > 1)       return { arrow: "↑ getting slower", cls: "up",   delta };
+    if (delta < -1)      return { arrow: "↓ getting faster", cls: "down", delta };
+    return { arrow: "→ stable", cls: "flat", delta };
+  }
+  const avgRecent = recent.reduce((a,b)=>a+b,0)/recent.length;
+  const avgOlder  = older.reduce((a,b)=>a+b,0)/older.length;
+  const delta = avgRecent - avgOlder;
+  if (delta > 1.5)  return { arrow: "↑ getting slower", cls: "up",   delta };
+  if (delta < -1.5) return { arrow: "↓ getting faster", cls: "down", delta };
+  return { arrow: "→ stable", cls: "flat", delta };
+}
+
+// ── Historical average (same weekday, same 30-min slot) ───────────────────
+function calcHistorical(allRows, route) {
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0,10);
+  const weekday  = now.toLocaleDateString("en-US", { weekday: "long" });
+  const hour     = now.getHours();
+  // bucket: same weekday, same hour block
+  const hist = allRows.filter(r =>
+    r.route   === route &&
+    r.date    !== todayStr &&
+    r.weekday === weekday &&
+    r.time_hhmm && parseInt(r.time_hhmm.split(":")[0]) === hour
+  );
+  if (hist.length < 3) return null;
+  const avg = hist.reduce((a,b) => a + parseFloat(b.duration_min), 0) / hist.length;
+  return Math.round(avg);
+}
+
+// ── Chart ─────────────────────────────────────────────────────────────────
+let chart = null;
+function updateChart(grouped) {
+  // Collect all time labels from any route
+  const allTimes = [...new Set(
+    ROUTES.flatMap(r => grouped[r].map(p => p.time))
+  )].sort();
+
+  const datasets = ROUTES.map(r => ({
+    label:       ROUTE_LABELS[r],
+    data:        allTimes.map(t => {
+      const pt = grouped[r].find(p => p.time === t);
+      return pt ? pt.dur : null;
+    }),
+    borderColor: ROUTE_COLORS[r],
+    backgroundColor: ROUTE_COLORS[r] + "22",
+    tension:     0.35,
+    spanGaps:    true,
+    pointRadius: 4,
+    borderWidth: 2,
+    borderDash:  r === "Secondary" ? [4,3] : r === "Ottange" ? [2,2] : [],
+  }));
+
+  if (chart) {
+    chart.data.labels   = allTimes;
+    chart.data.datasets = datasets;
+    chart.update("none");
+  } else {
+    chart = new Chart(document.getElementById("trendChart"), {
+      type: "line",
+      data: { labels: allTimes, datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y?.toFixed(1)} min`
+            }
+          }
+        },
+        scales: {
+          x: { ticks: { font:{size:11}, color:"#888", autoSkip: false, maxRotation: 45 }, grid:{ color:"rgba(128,128,128,0.1)" } },
+          y: { ticks: { font:{size:11}, color:"#888" }, grid:{ color:"rgba(128,128,128,0.1)" },
+               title: { display:true, text:"min", color:"#888", font:{size:11} } }
+        }
+      }
+    });
+  }
+}
+
+// ── Custom legend ─────────────────────────────────────────────────────────
+function renderLegend() {
+  const existing = document.getElementById("custom-legend");
+  if (existing) return;
+  const wrap = document.createElement("div");
+  wrap.id = "custom-legend";
+  wrap.style.cssText = "display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px;font-size:12px;color:var(--muted)";
+  ROUTES.forEach((r,i) => {
+    const dash = r === "Secondary" ? "dashed" : r === "Ottange" ? "dotted" : "solid";
+    wrap.innerHTML += `<span style="display:flex;align-items:center;gap:5px;">
+      <span style="width:18px;height:2px;border-top:2.5px ${dash} ${ROUTE_COLORS[r]};display:inline-block"></span>
+      ${ROUTE_LABELS[r]}</span>`;
+  });
+  document.querySelector(".chart-wrap").insertBefore(wrap, document.querySelector(".chart-title").nextSibling);
+}
+
+// ── Main render ───────────────────────────────────────────────────────────
+function render(allRows) {
+  const todayRows = getTodayRows(allRows);
+  const grouped   = groupByRoute(todayRows);
+
+  // Header
+  const now = new Date();
+  document.getElementById("date-line").textContent =
+    now.toLocaleDateString("en-GB", {weekday:"long", day:"numeric", month:"long"}) +
+    " — last checked " + now.toLocaleTimeString("en-GB", {hour:"2-digit",minute:"2-digit"});
+
+  // Status dot
+  const totalPoints = ROUTES.reduce((s,r) => s + grouped[r].length, 0);
+  const dot  = document.getElementById("status-dot");
+  const stxt = document.getElementById("status-text");
+  if (totalPoints === 0) {
+    dot.className = "dot"; stxt.textContent = "No data yet for today";
+  } else {
+    const lastTime = todayRows[todayRows.length-1]?.time_hhmm || "–";
+    dot.className = "dot live";
+    stxt.textContent = `Live · ${totalPoints} polls · last at ${lastTime}`;
+  }
+
+  // Route cards
+  let bestRoute = null, bestTime = Infinity;
+  ROUTES.forEach(r => {
+    const pts = grouped[r];
+    const latest = pts.length ? pts[pts.length-1].dur : null;
+    const trend  = calcTrend(pts);
+    const hist   = calcHistorical(allRows, r);
+
+    document.getElementById("time-"+r).textContent = latest ? Math.round(latest) : "–";
+    const trendEl = document.getElementById("trend-"+r);
+    trendEl.textContent  = pts.length >= 2 ? trend.arrow : "→ collecting…";
+    trendEl.className    = "trend " + trend.cls;
+
+    let meta = pts.length ? `${pts.length} polls today` : "no data yet";
+    if (hist) meta += ` · hist. avg ${hist} min`;
+    document.getElementById("meta-"+r).textContent = meta;
+
+    if (latest && latest < bestTime) { bestTime = latest; bestRoute = r; }
+  });
+
+  // Best card highlight
+  ROUTES.forEach(r => {
+    const card = document.getElementById("card-"+r);
+    const badge = card.querySelector(".best-badge");
+    if (r === bestRoute && bestRoute !== null) {
+      card.classList.add("best");
+      if (!badge) {
+        const b = document.createElement("div");
+        b.className = "best-badge"; b.textContent = "✓ fastest now";
+        card.prepend(b);
+      }
+    } else {
+      card.classList.remove("best");
+      if (badge) badge.remove();
+    }
+  });
+
+  // Historical block (show if we have data from previous days)
+  const prevDays = allRows.filter(r => r.date !== new Date().toISOString().slice(0,10));
+  if (prevDays.length > 20) {
+    const histEl = document.getElementById("hist-note");
+    histEl.style.display = "block";
+    const lines = ROUTES.map(r => {
+      const h = calcHistorical(allRows, r);
+      return h ? `${ROUTE_LABELS[r]}: ${h} min` : null;
+    }).filter(Boolean);
+    document.getElementById("hist-text").textContent =
+      lines.length ? lines.join(" · ") : "Building history… check back in a few weeks.";
+  }
+
+  // Chart
+  if (totalPoints > 0) {
+    renderLegend();
+    updateChart(grouped);
+  }
+
+  document.getElementById("last-updated").textContent =
+    "Auto-refreshes every 3 min";
+}
+
+// ── Load & auto-refresh ───────────────────────────────────────────────────
+async function loadData() {
+  const { sheetId } = getConfig();
+  if (!sheetId) {
+    document.getElementById("status-text").textContent = "Enter your Sheet ID below ↓";
+    document.getElementById("status-dot").className = "dot stale";
+    return;
+  }
+  try {
+    const rows = await fetchSheetData();
+    if (rows) render(rows);
+    document.getElementById("last-updated").textContent =
+      "Updated " + new Date().toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
+  } catch(e) {
+    document.getElementById("status-text").textContent = "Error loading data: " + e.message;
+    document.getElementById("status-dot").className = "dot stale";
+  }
+}
+
+// Pre-fill config inputs
+const cfg = getConfig();
+document.getElementById("cfg-sheet-id").value = cfg.sheetId;
+document.getElementById("cfg-tab").value      = cfg.tab;
+
+loadData();
+setInterval(loadData, 3 * 60 * 1000);  // auto-refresh every 3 min
+</script>
+</body>
+</html>

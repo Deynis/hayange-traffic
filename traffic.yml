@@ -1,0 +1,46 @@
+# .github/workflows/traffic.yml
+#
+# Runs the traffic poller Tue–Fri at 6:00 AM Luxembourg time.
+# Luxembourg is UTC+1 in winter, UTC+2 in summer (CEST).
+# GitHub Actions cron is always UTC, so we use 4:00 UTC (covers both offsets
+# with a small tolerance — adjust if needed seasonally).
+#
+# Mon = 1, Tue = 2, Wed = 3, Thu = 4, Fri = 5 in cron day-of-week.
+# We exclude Monday by running only Tue–Fri (2-5).
+
+name: Traffic Poller
+
+on:
+  schedule:
+    # 04:00 UTC = 05:00 CET (winter) / 06:00 CEST (summer)
+    # Adjust to "05:00" UTC in winter months (Oct–Mar) for exact 6 AM CET
+    - cron: "0 4 * * 2-5"   # summer (CEST, UTC+2)
+    # Uncomment the line below and comment the above during winter (CET, UTC+1):
+    # - cron: "0 5 * * 2-5"
+  workflow_dispatch:          # allows manual "Run workflow" from GitHub UI for testing
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60       # safety cap — poller runs ~47 min
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install requests gspread google-auth
+
+      - name: Run traffic poller
+        env:
+          GOOGLE_MAPS_API_KEY:       ${{ secrets.GOOGLE_MAPS_API_KEY }}
+          GOOGLE_SHEET_ID:           ${{ secrets.GOOGLE_SHEET_ID }}
+          GCP_SERVICE_ACCOUNT_JSON:  ${{ secrets.GCP_SERVICE_ACCOUNT_JSON }}
+          TELEGRAM_BOT_TOKEN:        ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID:          ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python poller.py
