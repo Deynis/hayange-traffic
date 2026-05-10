@@ -20,13 +20,19 @@ GCP_CREDS_JSON   = os.environ["GCP_SERVICE_ACCOUNT_JSON"]   # full JSON string
 TELEGRAM_TOKEN   = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
-ORIGIN = "Hayange, France"
-DESTINATION = "2 Rue du Château d'Eau, 3364 Dudelange, Luxembourg"  # PwC Dudelange
+ORIGIN = "31 Rue de la Mine, 57700 Hayange, France"  # Feralia
+DESTINATION = "147 Route de Volmerange, 3593 Dudelange, Luxembourg"  # PwC
 
 ROUTES = {
-    "A31":       {"waypoints": "Kanfen, France|Volmerange-les-Mines, France"},
-    "Secondary": {"waypoints": "Saint-Michel-sur-Moselle, France|Angevillers, France|Eschrange, France|Volmerange-les-Mines, France"},
-    "Ottange":   {"waypoints": "Saint-Michel-sur-Moselle, France|Angevillers, France|Ottange, France|Volmerange-les-Mines, France"},
+    "A31": {
+        "waypoints": "via:Kanfen, France|Volmerange-les-Mines, France"
+    },
+    "Eschrange": {
+        "waypoints": "via:Angevillers, France|via:Escherange, France|Molvange, France"
+    },
+    "Ottange": {
+        "waypoints": "via:Angevillers, France|via:Rochonvillers, France|via:Ottange, France"
+    },
 }
 
 POLL_INTERVAL_SEC = 180   # 3 minutes
