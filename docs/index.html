@@ -168,14 +168,12 @@ function saveConfig() {
   loadData();
 }
 
-// ── Fetch from Google Sheets (published CSV) ───────────────────────────────
 async function fetchSheetData() {
   const { sheetId, tab } = getConfig();
   if (!sheetId) return null;
-  // Published CSV URL — Sheet must be File > Share > Publish to web (CSV)
-  const url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&sheet=${encodeURIComponent(tab)}`;
-//  const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tab)}`;
-  const resp = await fetch(url + "&t=" + Date.now());
+  const sheetUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&sheet=${encodeURIComponent(tab)}`;
+  const proxy = `https://corsproxy.io/?url=${encodeURIComponent(sheetUrl)}`;
+  const resp = await fetch(proxy + "&t=" + Date.now());
   if (!resp.ok) throw new Error("Sheet fetch failed: " + resp.status);
   const text = await resp.text();
   return parseCSV(text);
