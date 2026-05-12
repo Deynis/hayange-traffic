@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy"
+  content="default-src 'none'; script-src 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'unsafe-inline'; connect-src https://docs.google.com; img-src 'none';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Hayange → PwC Dudelange</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -163,8 +165,14 @@ function getConfig() {
   };
 }
 function saveConfig() {
-  localStorage.setItem("sheetId", document.getElementById("cfg-sheet-id").value.trim());
-  localStorage.setItem("tab",     document.getElementById("cfg-tab").value.trim());
+  const id  = document.getElementById("cfg-sheet-id").value.trim();
+  const tab = document.getElementById("cfg-tab").value.trim();
+  if (id && !/^[a-zA-Z0-9_-]{20,60}$/.test(id)) {
+    alert("Sheet ID looks wrong — it should be a 44-character alphanumeric string from the spreadsheet URL.");
+    return;
+  }
+  localStorage.setItem("sheetId", id);
+  localStorage.setItem("tab", tab || "raw_data");
   loadData();
 }
 
@@ -270,7 +278,7 @@ function updateChart(grouped) {
     spanGaps:    true,
     pointRadius: 4,
     borderWidth: 2,
-    borderDash:  r === "Secondary" ? [4,3] : r === "Ottange" ? [2,2] : [],
+    borderDash:  r === "Eschrange" ? [4,3] : r === "Ottange" ? [2,2] : [],
   }));
 
   if (chart) {
@@ -309,11 +317,16 @@ function renderLegend() {
   const wrap = document.createElement("div");
   wrap.id = "custom-legend";
   wrap.style.cssText = "display:flex;gap:16px;flex-wrap:wrap;margin-bottom:8px;font-size:12px;color:var(--muted)";
-  ROUTES.forEach((r,i) => {
-    const dash = r === "Secondary" ? "dashed" : r === "Ottange" ? "dotted" : "solid";
-    wrap.innerHTML += `<span style="display:flex;align-items:center;gap:5px;">
-      <span style="width:18px;height:2px;border-top:2.5px ${dash} ${ROUTE_COLORS[r]};display:inline-block"></span>
-      ${ROUTE_LABELS[r]}</span>`;
+  ROUTES.forEach(r => {
+    const dash = r === "Eschrange" ? "dashed" : r === "Ottange" ? "dotted" : "solid";
+    const item = document.createElement("span");
+    item.style.cssText = "display:flex;align-items:center;gap:5px;";
+    const line = document.createElement("span");
+    line.style.cssText = `width:18px;height:2px;border-top:2.5px ${dash} ${ROUTE_COLORS[r]};display:inline-block`;
+    const label = document.createElement("span");
+    label.textContent = ROUTE_LABELS[r];
+    item.append(line, label);
+    wrap.append(item);
   });
   document.querySelector(".chart-wrap").insertBefore(wrap, document.querySelector(".chart-title").nextSibling);
 }

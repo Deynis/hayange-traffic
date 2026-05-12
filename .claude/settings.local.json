@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Shadow\\\\.claude\\\\plugins\\\\marketplaces\\\\claude-plugins-official\\\\plugins\\\\example-plugin\" -Recurse | ForEach-Object { $_.FullName })",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Shadow\\\\Documents\\\\TrafficTrends\" -File -ErrorAction SilentlyContinue | Where-Object {$_.Name -match \"settings|\\\\.claude|config\"} | Select-Object FullName, Name)"
+    ]
+  }
+}

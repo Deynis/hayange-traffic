@@ -20,6 +20,8 @@ jobs:
   poll:
     runs-on: ubuntu-latest
     timeout-minutes: 50       # safety cap — poller runs 40 min
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout repo
@@ -31,7 +33,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install requests gspread google-auth
+        run: pip install "requests>=2.31,<3" "gspread>=6.0,<7" "google-auth>=2.28,<3"
 
       - name: Run traffic poller
         env:

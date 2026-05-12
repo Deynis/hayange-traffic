@@ -11,7 +11,6 @@ import json
 import requests
 from datetime import datetime, timezone
 import gspread
-from google.oauth2.service_account import Credentials
 
 # ── Configuration ────────────────────────────────────────────────────────────
 
@@ -45,12 +44,11 @@ SHEET_TAB_META    = "meta"
 # ── Google Sheets setup ──────────────────────────────────────────────────────
 
 def get_sheet():
-    creds_dict = json.loads(GCP_CREDS_JSON)
-    creds = Credentials.from_service_account_info(
-        creds_dict,
-        scopes=["https://www.googleapis.com/auth/spreadsheets"]
-    )
-    gc = gspread.authorize(creds)
+    try:
+        creds_dict = json.loads(GCP_CREDS_JSON)
+    except json.JSONDecodeError:
+        raise RuntimeError("GCP_SERVICE_ACCOUNT_JSON is not valid JSON") from None
+    gc = gspread.service_account_from_dict(creds_dict)
     return gc.open_by_key(SHEET_ID)
 
 def ensure_headers(sheet):
@@ -86,27 +84,37 @@ def get_duration(route_name, route_cfg):
         "traffic_model":     "best_guess",
         "key":               GOOGLE_API_KEY,
     }
-    r = requests.get(
-        "https://maps.googleapis.com/maps/api/directions/json",
-        params=params, timeout=10
-    )
-    data = r.json()
-    if data["status"] != "OK":
-        print(f"  [WARN] {route_name}: API status {data['status']}")
-        return None
-    leg = data["routes"][0]["legs"][0]
-    # duration_in_traffic is present when departure_time is set
-    return leg.get("duration_in_traffic", leg["duration"])["value"]
+    for attempt in range(3):
+        try:
+            r = requests.get(
+                "https://maps.googleapis.com/maps/api/directions/json",
+                params=params, timeout=10
+            )
+            data = r.json()
+            if data["status"] != "OK":
+                print(f"  [WARN] {route_name}: API status {data['status']}")
+                return None
+            leg = data["routes"][0]["legs"][0]
+            # duration_in_traffic is present when departure_time is set
+            return leg.get("duration_in_traffic", leg["duration"])["value"]
+        except requests.RequestException as e:
+            if attempt == 2:
+                print(f"  [ERROR] {route_name}: failed after 3 attempts — {e}")
+                return None
+            time.sleep(2 ** attempt)
 
 # ── Telegram notification ────────────────────────────────────────────────────
 
 def send_telegram(message):
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    requests.post(url, json={
-        "chat_id": TELEGRAM_CHAT_ID,
-        "text": message,
-        "parse_mode": "Markdown"
-    }, timeout=10)
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+        requests.post(url, json={
+            "chat_id": TELEGRAM_CHAT_ID,
+            "text": message,
+            "parse_mode": "Markdown"
+        }, timeout=10)
+    except Exception as e:
+        print(f"  [WARN] Telegram send failed: {e}")
 
 def build_summary(session_data):
     """
