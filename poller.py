@@ -1,7 +1,8 @@
 """
 Hayange → PwC Dudelange — Traffic Poller
-Runs Tue–Fri, 6:00–6:45 AM (enforced by GitHub Actions cron)
-Polls 3 routes every 3 minutes, writes to Google Sheets, sends Telegram summary.
+Runs Tue–Fri, 6:20–7:00 AM (enforced by GitHub Actions cron).
+Polls 3 routes every 3 minutes, writes to Google Sheets,
+sends a Telegram update every ~10 min (5 messages per session).
 """
 
 import os
@@ -35,8 +36,9 @@ ROUTES = {
     },
 }
 
-POLL_INTERVAL_SEC = 180   # 3 minutes
-POLL_DURATION_SEC = 2700  # 45 minutes
+POLL_INTERVAL_SEC    = 180   # 3 minutes
+POLL_DURATION_SEC    = 2400  # 40 minutes (6:20 → 7:00)
+TELEGRAM_INTERVAL_SEC = 600  # send update every 10 minutes
 SHEET_TAB_DATA    = "raw_data"
 SHEET_TAB_META    = "meta"
 
@@ -159,6 +161,7 @@ def main():
 
     session_data = []
     start = time.time()
+    next_telegram = start  # send immediately at 6:20
 
     while time.time() - start < POLL_DURATION_SEC:
         now = datetime.now(timezone.utc).astimezone()
@@ -172,16 +175,21 @@ def main():
                 print(f"  {route_name}: {round(secs/60)} min")
             time.sleep(2)  # small gap between route calls
 
-        elapsed = time.time() - start
-        remaining = POLL_INTERVAL_SEC - (time.time() - start + elapsed % POLL_INTERVAL_SEC)
+        if session_data and time.time() >= next_telegram:
+            summary = build_summary(session_data)
+            print(f"\n[{datetime.now():%H:%M}] Sending Telegram update…\n" + summary)
+            send_telegram(summary)
+            next_telegram += TELEGRAM_INTERVAL_SEC
+
         sleep_for = max(0, POLL_INTERVAL_SEC - 6)  # 3 route calls ~6s total
         print(f"  sleeping {sleep_for}s…")
         time.sleep(sleep_for)
 
-    # ── End of session: send Telegram summary ────────────────────────────────
-    summary = build_summary(session_data)
-    print("\n" + summary)
-    send_telegram(summary)
+    # ── Final message at 7:00 AM ─────────────────────────────────────────────
+    if session_data:
+        summary = build_summary(session_data)
+        print(f"\n[{datetime.now():%H:%M}] Final Telegram update…\n" + summary)
+        send_telegram(summary)
     print("\n[done] Session complete.")
 
 if __name__ == "__main__":

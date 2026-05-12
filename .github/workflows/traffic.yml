@@ -1,28 +1,25 @@
 # .github/workflows/traffic.yml
 #
-# Runs the traffic poller Tue–Fri at 6:00 AM Luxembourg time.
-# Luxembourg is UTC+1 in winter, UTC+2 in summer (CEST).
-# GitHub Actions cron is always UTC, so we use 4:00 UTC (covers both offsets
-# with a small tolerance — adjust if needed seasonally).
+# Runs the traffic poller Tue–Fri, 6:20–7:00 AM Luxembourg/French time.
+# Sends a Telegram update every ~10 min (5 messages per session).
+# Luxembourg/France: UTC+1 (CET, winter) / UTC+2 (CEST, summer).
+# GitHub Actions cron is UTC → 04:20 UTC = 06:20 CEST (summer).
+# Adjust to "05:20" UTC in winter (Oct–Mar) for CET.
 #
 # Mon = 1, Tue = 2, Wed = 3, Thu = 4, Fri = 5 in cron day-of-week.
-# We exclude Monday by running only Tue–Fri (2-5).
 
 name: Traffic Poller
 
 on:
   schedule:
-    # 04:00 UTC = 05:00 CET (winter) / 06:00 CEST (summer)
-    # Adjust to "05:00" UTC in winter months (Oct–Mar) for exact 6 AM CET
-    - cron: "0 4 * * 2-5"   # summer (CEST, UTC+2)
-    # Uncomment the line below and comment the above during winter (CET, UTC+1):
-    # - cron: "0 5 * * 2-5"
+    - cron: "20 4 * * 2-5"    # summer (CEST, UTC+2): 06:20 AM
+    # - cron: "20 5 * * 2-5" # winter (CET,  UTC+1): 06:20 AM — uncomment Oct–Mar
   workflow_dispatch:          # allows manual "Run workflow" from GitHub UI for testing
 
 jobs:
   poll:
     runs-on: ubuntu-latest
-    timeout-minutes: 60       # safety cap — poller runs ~47 min
+    timeout-minutes: 50       # safety cap — poller runs 40 min
 
     steps:
       - name: Checkout repo
