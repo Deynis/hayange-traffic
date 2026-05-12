@@ -1,0 +1,41 @@
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vs/
+.vscode/
+.idea/
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# Packaging / build artefacts
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Test / coverage artefacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── Secrets & credentials ─────────────────────────────────────────────────────
+# Never commit API keys or service account files — use GitHub Secrets instead
+.env
+.env.local
+.env.*.local
+*service_account*.json
+*credentials*.json
+*secret*.json
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+Thumbs.db
+desktop.ini
+ehthumbs.db
+.DS_Store
