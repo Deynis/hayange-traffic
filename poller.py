@@ -95,8 +95,10 @@ def get_duration(route_name, route_cfg):
                 print(f"  [WARN] {route_name}: API status {data['status']}")
                 return None
             leg = data["routes"][0]["legs"][0]
-            # duration_in_traffic is present when departure_time is set
-            return leg.get("duration_in_traffic", leg["duration"])["value"]
+            if "duration_in_traffic" not in leg:
+                print(f"  [WARN] {route_name}: duration_in_traffic missing from response")
+                return None
+            return leg["duration_in_traffic"]["value"]
         except requests.RequestException as e:
             if attempt == 2:
                 print(f"  [ERROR] {route_name}: failed after 3 attempts — {e}")

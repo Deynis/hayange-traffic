@@ -3,8 +3,8 @@
 # Runs the traffic poller Tue–Fri, 6:20–7:00 AM Luxembourg/French time.
 # Sends a Telegram update every ~10 min (5 messages per session).
 # Luxembourg/France: UTC+1 (CET, winter) / UTC+2 (CEST, summer).
-# GitHub Actions cron is UTC → 04:20 UTC = 06:20 CEST (summer).
-# Adjust to "05:20" UTC in winter (Oct–Mar) for CET.
+# GitHub Actions cron is UTC → 02:20 UTC target, +2h buffer for GH scheduling delay.
+# Adjust winter cron to "03:20" UTC (Oct–Mar) for CET.
 #
 # Mon = 1, Tue = 2, Wed = 3, Thu = 4, Fri = 5 in cron day-of-week.
 
@@ -12,8 +12,8 @@ name: Traffic Poller
 
 on:
   schedule:
-    - cron: "20 4 * * 2-5"    # summer (CEST, UTC+2): 06:20 AM
-    # - cron: "20 5 * * 2-5" # winter (CET,  UTC+1): 06:20 AM — uncomment Oct–Mar
+    - cron: "20 2 * * 2-5"    # summer (CEST, UTC+2): targets 06:20 AM, +2h buffer for GH delay
+    # - cron: "20 3 * * 2-5" # winter (CET,  UTC+1): targets 06:20 AM, +2h buffer for GH delay
   workflow_dispatch:          # allows manual "Run workflow" from GitHub UI for testing
 
 jobs:
