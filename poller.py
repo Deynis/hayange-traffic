@@ -25,10 +25,10 @@ DESTINATION = "147 Route de Volmerange, 3593 Dudelange, Luxembourg"  # PwC
 
 ROUTES = {
     "A31": {
-        "waypoints": "via:Kanfen, France|Volmerange-les-Mines, France"
+        "waypoints": "via:Kanfen, France|via:Volmerange-les-Mines, France"
     },
     "Eschrange": {
-        "waypoints": "via:Angevillers, France|via:Escherange, France|Molvange, France"
+        "waypoints": "via:Angevillers, France|via:Escherange, France|via:Molvange, France"
     },
     "Ottange": {
         "waypoints": "via:Angevillers, France|via:Rochonvillers, France|via:Ottange, France"
