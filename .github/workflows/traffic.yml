@@ -11,9 +11,6 @@
 name: Traffic Poller
 
 on:
-  schedule:
-    - cron: "20 2 * * 2-5"    # summer (CEST, UTC+2): targets 06:20 AM, +2h buffer for GH delay
-    # - cron: "20 3 * * 2-5" # winter (CET,  UTC+1): targets 06:20 AM, +2h buffer for GH delay
   workflow_dispatch:          # allows manual "Run workflow" from GitHub UI for testing
 
 jobs:
